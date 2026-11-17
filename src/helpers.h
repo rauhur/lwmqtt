@@ -4,22 +4,24 @@
 #include <lwmqtt.h>
 
 /**
- * Reads bits from a byte.
+ * Reads bits from a byte. Bit positions start at zero for the least significant bit.
  *
  * @param byte The byte to read from.
- * @param pos The position of the first bit.
- * @param num The number of bits to read.
- * @return The read bits as a byte.
+ * @param pos The position of the first bit (0 to 7).
+ * @param num The number of bits to read (1 to 8 - pos).
+ * @return The read bits as a byte, or 0 if the position or length is invalid.
  */
 uint8_t lwmqtt_read_bits(uint8_t byte, int pos, int num);
 
 /**
- * Write bits to a byte.
+ * Writes bits to a byte. Bit positions start at zero for the least significant bit.
+ * Bits outside the selected field are preserved. If byte is NULL or the position or length is invalid,
+ * the function does nothing.
  *
  * @param byte The byte to write bits to.
- * @param value The bits to write as a byte.
- * @param pos The position of the first bit.
- * @param num The number of bits to write.
+ * @param value The bits to write; bits above the selected field width are discarded.
+ * @param pos The position of the first bit (0 to 7).
+ * @param num The number of bits to write (1 to 8 - pos).
  */
 void lwmqtt_write_bits(uint8_t *byte, uint8_t value, int pos, int num);
 

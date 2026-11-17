@@ -1,7 +1,64 @@
 #include <gtest/gtest.h>
 
+#include <limits.h>
+
 extern "C" {
 #include "../src/helpers.h"
+}
+
+TEST(Helpers, ReadAllValidBitFields) {
+  for (int pos = 0; pos < 8; pos++) {
+    for (int num = 1; num <= 8 - pos; num++) {
+      const unsigned divisor = 1u << pos;
+      const unsigned range = 1u << num;
+      for (unsigned byte = 0; byte <= 0xFF; byte++) {
+        const unsigned expected = (byte / divisor) % range;
+        ASSERT_EQ(lwmqtt_read_bits((uint8_t)byte, pos, num), expected)
+            << "byte=" << byte << " pos=" << pos << " num=" << num;
+      }
+    }
+  }
+}
+
+TEST(Helpers, WriteAllValidBitFields) {
+  for (int pos = 0; pos < 8; pos++) {
+    for (int num = 1; num <= 8 - pos; num++) {
+      for (unsigned original = 0; original <= 0xFF; original++) {
+        for (unsigned value = 0; value <= 0xFF; value++) {
+          uint8_t expected = (uint8_t)original;
+          for (int bit = 0; bit < num; bit++) {
+            const unsigned bit_mask = 1u << (pos + bit);
+            expected = (uint8_t)((expected & ~bit_mask) | (((value >> bit) & 1u) << (pos + bit)));
+          }
+          uint8_t actual = (uint8_t)original;
+          lwmqtt_write_bits(&actual, (uint8_t)value, pos, num);
+          ASSERT_EQ(actual, expected)
+              << "original=" << original << " value=" << value << " pos=" << pos << " num=" << num;
+        }
+      }
+    }
+  }
+}
+
+TEST(Helpers, InvalidBitFields) {
+  const int ranges[][2] = {{-1, 1},      {8, 1},       {9, 1},       {0, 0},       {0, -1},      {0, 9},
+                           {7, 2},       {INT_MIN, 1}, {INT_MAX, 1}, {0, INT_MIN}, {0, INT_MAX}};
+
+  for (size_t i = 0; i < sizeof(ranges) / sizeof(ranges[0]); i++) {
+    int pos = ranges[i][0];
+    int num = ranges[i][1];
+    uint8_t byte = 0xA5;
+
+    EXPECT_EQ(lwmqtt_read_bits(byte, pos, num), 0) << "pos=" << pos << " num=" << num;
+
+    lwmqtt_write_bits(&byte, 0xFF, pos, num);
+    EXPECT_EQ(byte, 0xA5) << "pos=" << pos << " num=" << num;
+  }
+}
+
+TEST(Helpers, WriteBitsNullByte) {
+  lwmqtt_write_bits(nullptr, 0xFF, 0, 8);
+  lwmqtt_write_bits(nullptr, 0xFF, INT_MIN, INT_MAX);
 }
 
 TEST(Helpers, VarNum1) {
